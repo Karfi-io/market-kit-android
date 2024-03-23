@@ -7860,6 +7860,7 @@ INSERT INTO Coin VALUES('auctus','Auctus','AUC',3630,'auctus');
 INSERT INTO Coin VALUES('baanx','Baanx','BXX',2158,'baanx');
 INSERT INTO Coin VALUES('axial-token','Axial Token','AXIAL',3641,'axial-token');
 INSERT INTO Coin VALUES('basis-cash','Basis Cash','BAC',3098,'basis-cash');
+INSERT INTO Coin VALUES('bcat','Billicat','BCAT',NULL,'billicat');
 INSERT INTO Coin VALUES('battle-pets','Battle Pets','PET',1790,'battle-pets');
 INSERT INTO Coin VALUES('bcpay-fintech','BCPAY FinTech','BCPAY',3489,'bcpay-fintech');
 INSERT INTO Coin VALUES('asia-coin','Asia Coin','ASIA',1865,'asia-coin');
