@@ -1,41 +1,37 @@
 package io.horizontalsystems.marketkit.demo
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
-import androidx.core.content.FileProvider
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.horizontalsystems.marketkit.BuildConfig
 import io.horizontalsystems.marketkit.MarketKit
-import io.horizontalsystems.marketkit.models.BlockchainType
-import io.horizontalsystems.marketkit.models.HsPeriodType
-import io.horizontalsystems.marketkit.models.HsPointTimePeriod
-import io.horizontalsystems.marketkit.models.HsTimePeriod
-import io.horizontalsystems.marketkit.models.TokenQuery
-import io.horizontalsystems.marketkit.models.TokenType
+import io.horizontalsystems.marketkit.models.*
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     private val disposables = CompositeDisposable()
-    private val authToken = ""
 
-    private val _exportDumpUri = MutableLiveData<Uri>()
-
-    val exportDumpUri: LiveData<Uri>
-        get() = _exportDumpUri
+    fun runAudits() {
+        val uniswapAddresses = listOf(
+            "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+            "0xbf5140a22578168fd562dccf235e5d43a02ce9b1"
+        )
+        marketKit.auditReportsSingle(uniswapAddresses)
+            .subscribeOn(Schedulers.io())
+            .subscribe({ auditors ->
+                auditors.forEach { auditor ->
+                    Log.e("AAA", auditor.name)
+                }
+            }, {
+                Log.e("AAA", "error", it)
+            }).let {
+                disposables.add(it)
+            }
+    }
 
     fun runInvestments() {
         val coinUid = "ethereum"
@@ -73,7 +69,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
         marketKit.sync()
         marketKit.refreshCoinPrices("USD")
 
-        marketKit.coinPriceMapObservable("wallet", listOf("bitcoin", "ethereum", "solana"), "USD")
+        marketKit.coinPriceMapObservable(listOf("bitcoin", "ethereum", "solana"), "USD")
             .subscribeOn(Schedulers.io())
             .subscribe({
                 Log.w("AAA", "coinPrices: ${it.size}")
@@ -121,25 +117,6 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
             }
     }
 
-    fun runGetChartPointByHsTimePeriod() {
-        val coinUid = "ethereum"
-        val currencyCode = "USD"
-
-        val interval = HsPointTimePeriod.Hour1
-
-        //fetch chartInfo from API
-        marketKit.chartPointsSingle(coinUid, currencyCode, interval, 12)
-            .subscribeOn(Schedulers.io())
-            .subscribe({
-                Log.w("AAA", "runGetChartPointByHsTimePeriod: ${it}")
-            }, {
-                Log.e("AAA", "runGetChartPointByHsTimePeriod Error", it)
-            })
-            .let {
-                disposables.add(it)
-            }
-    }
-
     fun runFilterFullCoins() {
         val filter = "if"
         val fullCoins = marketKit.fullCoins(filter, 100)
@@ -168,7 +145,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     fun runFetchMarketInfosByCoinUids() {
         val coinUids = listOf("bitcoin", "ethereum", "solana", "ripple")
         val currencyCode = "USD"
-        marketKit.marketInfosSingle(coinUids, currencyCode, "demo-app-tag")
+        marketKit.marketInfosSingle(coinUids, currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({
                 it.forEach {
@@ -185,7 +162,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     fun runFetchMarketInfosByCategory() {
         val categoryUid = "dexes"
         val currencyCode = "USD"
-        marketKit.marketInfosSingle(categoryUid, currencyCode, "demo-app-tag")
+        marketKit.marketInfosSingle(categoryUid, currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({
                 it.forEach {
@@ -263,25 +240,8 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
                 Log.w("AAA", "marketOverview coinCategories: ${it.coinCategories}")
                 Log.w("AAA", "marketOverview topPlatforms: ${it.topPlatforms}")
                 Log.w("AAA", "marketOverview nft collections: ${it.nftCollections}")
-                Log.w("AAA", "marketOverview top pairs: ${it.topPairs}")
             }, {
                 Log.e("AAA", "marketOverview Error", it)
-            })
-            .let {
-                disposables.add(it)
-            }
-    }
-
-    fun runTopPairs() {
-        Log.w("AAA", "doTopPairs")
-        marketKit.topPairsSingle("USD", 1, 100)
-            .subscribeOn(Schedulers.io())
-            .subscribe({
-                it.forEach {
-                    Log.w("AAA", "TopPairs: $it")
-                }
-            }, {
-                Log.e("AAA", "TopPairs Error", it)
             })
             .let {
                 disposables.add(it)
@@ -308,7 +268,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     private fun doMarketInfoOverview(coinUid: String) {
         Log.w("AAA", "doMarketInfoOverview coinUid: $coinUid")
-        marketKit.marketInfoOverviewSingle(coinUid, "USD", "en", "demo-app-tag")
+        marketKit.marketInfoOverviewSingle(coinUid, "USD", "en")
             .subscribeOn(Schedulers.io())
             .subscribe({
                 Log.w("AAA", "marketInfoOverview: $it")
@@ -343,7 +303,10 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
                 it
                     .sortedByDescending { it.volume }
                     .forEach {
-                        Log.w("AAA", "getMarketTickers: $it")
+                        Log.w(
+                            "AAA",
+                            "getMarketTickers: ${it.marketName} rate: ${it.rate} vol: ${it.volume} base: ${it.base} target: ${it.target} tradeUrl: ${it.tradeUrl}"
+                        )
                     }
             }, {
                 Log.e("AAA", "getMarketTickers Error", it)
@@ -355,7 +318,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     fun runGetMarketDefi() {
         val currencyUsd = "usd"
-        marketKit.defiMarketInfosSingle(currencyUsd, "demo-app-tag")
+        marketKit.defiMarketInfosSingle(currencyUsd)
             .subscribeOn(Schedulers.io())
             .subscribe({
                 it
@@ -387,14 +350,6 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
         Log.w("AAA", "runBlockchainsType ${blockchains.size} coins found")
         blockchains.forEach {
             Log.w("AAA", "runBlockchainsType name: ${it.name}")
-        }
-    }
-
-    fun runAllBlockchains() {
-        val blockchains = marketKit.allBlockchains()
-        Log.w("AAA", "runAllBlockchains ${blockchains.size} blockchains found")
-        blockchains.forEach {
-            Log.w("AAA", "runAllBlockchains name: ${it.name}")
         }
     }
 
@@ -450,7 +405,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     fun runTopPlatforms() {
         val currencyCode = "eur"
-        marketKit.topPlatformsSingle(currencyCode, "demo-app-tag")
+        marketKit.topPlatformsSingle(currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ platforms ->
                 platforms.forEach {
@@ -466,7 +421,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     fun runTopPlatformMarketCapPoints() {
         val chain = "ethereum"
         val currencyCode = "rub"
-        marketKit.topPlatformMarketCapPointsSingle(chain, currencyCode, HsPeriodType.ByPeriod(HsTimePeriod.Month1))
+        marketKit.topPlatformMarketCapPointsSingle(chain, HsTimePeriod.Day1, currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ points ->
                 points.forEach {
@@ -477,24 +432,12 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
             }).let {
                 disposables.add(it)
             }
-
-        marketKit.topPlatformMarketCapStartTimeSingle(chain)
-            .subscribeOn(Schedulers.io())
-            .subscribe({
-                Log.e("AAA", "topPlatformMarketCapStartTimeSingle: $it")
-            }, {
-                Log.e("AAA", "topPlatformMarketCapStartTimeSingle Error", it)
-
-            })
-            .let {
-                disposables.add(it)
-            }
     }
 
     fun runTopPlatformCoinList() {
         val chain = "ethereum"
         val currencyCode = "eur"
-        marketKit.topPlatformMarketInfosSingle(chain, currencyCode, "demo-app-tag")
+        marketKit.topPlatformCoinListSingle(chain, currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ points ->
                 points.forEach {
@@ -509,12 +452,11 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     fun runAnalyticsPreview() {
         val chain = "ethereum"
-        marketKit.analyticsPreviewSingle(chain, listOf(), "demo-app-tag")
+        marketKit.analyticsPreviewSingle(chain)
             .subscribeOn(Schedulers.io())
             .subscribe({ data ->
                 Log.e("AAA", "cexVolume rank30d: ${data.cexVolume?.rank30d} points: ${data.cexVolume?.points} dexVolume rank30d: ${data.dexVolume?.rank30d} points: ${data.dexVolume?.points} ")
-                Log.e("AAA", "fundsInvested: ${data.fundsInvested} holders: ${data.holders} holders rating: ${data.holdersRating} ")
-                Log.e("AAA", "fee fee rank30d: ${data.fee?.rank30d} value30d: ${data.fee?.value30d} ")
+                Log.e("AAA", "fundsInvested: ${data.fundsInvested} holders: ${data.holders} ")
             }, {
                 Log.e("AAA", "runAnalyticsPreview error", it)
             }).let {
@@ -523,15 +465,13 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     }
 
     fun runAnalytics() {
-        val coinUid = "uniswap"
+        val chain = "ethereum"
         val currencyCode = "usd"
-        marketKit.analyticsSingle(authToken, coinUid, currencyCode, "demo-app-tag")
+        marketKit.analyticsSingle(chain, currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ data ->
                 Log.e("AAA", "cexVolume rank30d: ${data.cexVolume?.rank30d} points.size: ${data.cexVolume?.points?.size} transactions volume30d: ${data.transactions?.volume30d} points.size: ${data.transactions?.points?.size} ")
                 Log.e("AAA", "fundsInvested: ${data.fundsInvested} holders.size: ${data.holders?.size} ")
-                Log.e("AAA", "issues: ${data.issues} ")
-                Log.e("AAA", "advice: ${data.technicalAdvice?.advice} ${data.technicalAdvice?.middle} ")
             }, {
                 Log.e("AAA", "runAnalyticsPreview error", it)
             }).let {
@@ -542,7 +482,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
     fun runTokenHolders() {
         val coinUid = "uniswap"
         val blockchainUid = "ethereum"
-        marketKit.tokenHoldersSingle(authToken, coinUid, blockchainUid)
+        marketKit.tokenHoldersSingle(coinUid, blockchainUid)
             .subscribeOn(Schedulers.io())
             .subscribe({ data ->
                 Log.e("AAA", "runTokenHolders count: ${data.count} url: ${data.holdersUrl} holders.size: ${data.topHolders.size} ")
@@ -558,7 +498,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     fun runDexLiquidityRanks() {
         val currencyCode = "usd"
-        marketKit.dexLiquidityRanksSingle(authToken, currencyCode)
+        marketKit.dexLiquidityRanksSingle(currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ data ->
                 data.forEach { item ->
@@ -573,7 +513,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
 
     fun runRevenueRanks() {
         val currencyCode = "usd"
-        marketKit.revenueRanksSingle(authToken, currencyCode)
+        marketKit.revenueRanksSingle(currencyCode)
             .subscribeOn(Schedulers.io())
             .subscribe({ data ->
                 data.forEach { item ->
@@ -589,49 +529,7 @@ class MainViewModel(private val marketKit: MarketKit) : ViewModel() {
             }
     }
 
-    fun runHoldersRanks() {
-        val currencyCode = "usd"
-        marketKit.holderRanksSingle(authToken, currencyCode)
-            .subscribeOn(Schedulers.io())
-            .subscribe({ data ->
-                data.forEach { item ->
-                    Log.e(
-                        "AAA",
-                        "runHoldersRanks value1d: value: ${item.value} uid: ${item.uid} "
-                    )
-                }
-            }, {
-                Log.e("AAA", "runHoldersRanks error", it)
-            }).let {
-                disposables.add(it)
-            }
-    }
-
     override fun onCleared() {
         disposables.clear()
-    }
-
-    fun exportAsDump(applicationContext: Context) {
-        val exportFileName = "dump_initial_"
-
-        viewModelScope.launch(Dispatchers.IO) {
-            val dump = marketKit.getInitialDump()
-            val cacheDir = applicationContext.cacheDir
-            val tempFile = File.createTempFile(exportFileName, ".txt", cacheDir)
-            // Write the data to the file
-            FileOutputStream(tempFile).use { outputStream ->
-                outputStream.write(dump.toByteArray())
-            }
-            // Generate a content URI for the file using FileProvider
-            val exportFileUri = FileProvider.getUriForFile(
-                applicationContext,
-                BuildConfig.APPLICATION_ID + ".provider",
-                tempFile
-            )
-
-            withContext(Dispatchers.Main) {
-                _exportDumpUri.value = exportFileUri
-            }
-        }
     }
 }

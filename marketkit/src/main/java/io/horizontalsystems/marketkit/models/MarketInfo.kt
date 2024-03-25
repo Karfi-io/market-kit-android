@@ -15,11 +15,7 @@ data class MarketInfo(
     val marketCapRank: Int?,
     val totalVolume: BigDecimal?,
     val athPercentage: BigDecimal?,
-    val atlPercentage: BigDecimal?,
-    val listedOnTopExchanges: Boolean?,
-    val solidCex: Boolean?,
-    val solidDex: Boolean?,
-    val goodDistribution: Boolean?,
+    val atlPercentage: BigDecimal?
 ) {
     constructor(marketInfoRaw: MarketInfoRaw, fullCoin: FullCoin) : this(
         fullCoin,
@@ -35,9 +31,5 @@ data class MarketInfo(
         marketInfoRaw.totalVolume,
         marketInfoRaw.athPercentage,
         marketInfoRaw.atlPercentage,
-        marketInfoRaw.listedOnTopExchanges,
-        marketInfoRaw.solidCex,
-        marketInfoRaw.solidDex,
-        marketInfoRaw.goodDistribution,
     )
 }

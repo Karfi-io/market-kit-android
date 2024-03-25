@@ -24,14 +24,14 @@ class CoinSyncer(
 
     val fullCoinsUpdatedObservable = PublishSubject.create<Unit>()
 
-    fun sync(coinsTimestamp: Long, blockchainsTimestamp: Long, tokensTimestamp: Long) {
-        val lastCoinsSyncTimestamp = syncerStateDao.get(keyCoinsLastSyncTimestamp)?.toLong() ?: 0
+    fun sync(coinsTimestamp: Int, blockchainsTimestamp: Int, tokensTimestamp: Int) {
+        val lastCoinsSyncTimestamp = syncerStateDao.get(keyCoinsLastSyncTimestamp)?.toInt() ?: 0
         val coinsOutdated = lastCoinsSyncTimestamp != coinsTimestamp
 
-        val lastBlockchainsSyncTimestamp = syncerStateDao.get(keyBlockchainsLastSyncTimestamp)?.toLong() ?: 0
+        val lastBlockchainsSyncTimestamp = syncerStateDao.get(keyBlockchainsLastSyncTimestamp)?.toInt() ?: 0
         val blockchainsOutdated = lastBlockchainsSyncTimestamp != blockchainsTimestamp
 
-        val lastTokensSyncTimestamp = syncerStateDao.get(keyTokensLastSyncTimestamp)?.toLong() ?: 0
+        val lastTokensSyncTimestamp = syncerStateDao.get(keyTokensLastSyncTimestamp)?.toInt() ?: 0
         val tokensOutdated = lastTokensSyncTimestamp != tokensTimestamp
 
         if (!coinsOutdated && !blockchainsOutdated && !tokensOutdated) return
@@ -75,7 +75,7 @@ class CoinSyncer(
                 "bep2" -> response.symbol
                 "spl" -> response.address
                 else -> response.address
-            } ?: ""
+            }
         )
 
     fun stop() {
@@ -84,58 +84,11 @@ class CoinSyncer(
     }
 
     private fun handleFetched(coins: List<Coin>, blockchainEntities: List<BlockchainEntity>, tokenEntities: List<TokenEntity>) {
-        storage.update(coins, blockchainEntities, transform(tokenEntities))
+        storage.update(coins, blockchainEntities, tokenEntities)
         fullCoinsUpdatedObservable.onNext(Unit)
     }
 
-    private fun transform(tokenEntities: List<TokenEntity>): List<TokenEntity> {
-        val derivationReferences = TokenType.Derivation.values().map { it.name }
-        val addressTypes = TokenType.AddressType.values().map { it.name }
-
-        var result = tokenEntities
-        result = transform(
-            result,
-            BlockchainType.Bitcoin.uid,
-            "derived",
-            derivationReferences
-        )
-        result = transform(
-            result,
-            BlockchainType.Litecoin.uid,
-            "derived",
-            derivationReferences
-        )
-        result = transform(
-            result,
-            BlockchainType.BitcoinCash.uid,
-            "address_type",
-            addressTypes
-        )
-
-        return result
-    }
-
-    private fun transform(
-        tokenEntities: List<TokenEntity>,
-        blockchainUid: String,
-        transformedType: String,
-        references: List<String>
-    ): List<TokenEntity> {
-        val tokenEntitiesMutable = tokenEntities.toMutableList()
-        val indexOfFirst = tokenEntitiesMutable.indexOfFirst {
-            it.blockchainUid == blockchainUid
-        }
-        if (indexOfFirst != -1) {
-            val tokenEntity = tokenEntitiesMutable.removeAt(indexOfFirst)
-            val entities = references.map {
-                tokenEntity.copy(type = transformedType, reference = it)
-            }
-            tokenEntitiesMutable.addAll(entities)
-        }
-        return tokenEntitiesMutable
-    }
-
-    private fun saveLastSyncTimestamps(coins: Long, blockchains: Long, tokens: Long) {
+    private fun saveLastSyncTimestamps(coins: Int, blockchains: Int, tokens: Int) {
         syncerStateDao.save(keyCoinsLastSyncTimestamp, coins.toString())
         syncerStateDao.save(keyBlockchainsLastSyncTimestamp, blockchains.toString())
         syncerStateDao.save(keyTokensLastSyncTimestamp, tokens.toString())

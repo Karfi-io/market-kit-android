@@ -10,8 +10,7 @@ data class MarketOverviewResponse(
     val coinCategories: List<CoinCategory>,
     @SerializedName("platforms")
     val topPlatforms: List<TopPlatformResponse>,
-    val nft: NftCollections,
-    val pairs: List<TopPair>,
+    val nft: NftCollections
 ) {
 
     data class NftCollections(

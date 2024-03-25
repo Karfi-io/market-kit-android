@@ -3,64 +3,17 @@ package io.horizontalsystems.marketkit
 import android.content.Context
 import android.os.storage.StorageManager
 import io.horizontalsystems.marketkit.chart.HsChartRequestHelper
-import io.horizontalsystems.marketkit.managers.CoinHistoricalPriceManager
-import io.horizontalsystems.marketkit.managers.CoinManager
-import io.horizontalsystems.marketkit.managers.CoinPriceManager
-import io.horizontalsystems.marketkit.managers.CoinPriceSyncManager
-import io.horizontalsystems.marketkit.managers.DumpManager
-import io.horizontalsystems.marketkit.managers.GlobalMarketInfoManager
-import io.horizontalsystems.marketkit.managers.MarketOverviewManager
-import io.horizontalsystems.marketkit.managers.NftManager
-import io.horizontalsystems.marketkit.managers.PostManager
-import io.horizontalsystems.marketkit.models.Analytics
-import io.horizontalsystems.marketkit.models.AnalyticsPreview
-import io.horizontalsystems.marketkit.models.Blockchain
-import io.horizontalsystems.marketkit.models.BlockchainType
-import io.horizontalsystems.marketkit.models.ChartPoint
-import io.horizontalsystems.marketkit.models.Coin
-import io.horizontalsystems.marketkit.models.CoinCategory
-import io.horizontalsystems.marketkit.models.CoinInvestment
-import io.horizontalsystems.marketkit.models.CoinPrice
-import io.horizontalsystems.marketkit.models.CoinReport
-import io.horizontalsystems.marketkit.models.CoinTreasury
-import io.horizontalsystems.marketkit.models.DefiMarketInfo
-import io.horizontalsystems.marketkit.models.FullCoin
-import io.horizontalsystems.marketkit.models.GlobalMarketPoint
-import io.horizontalsystems.marketkit.models.HsPeriodType
-import io.horizontalsystems.marketkit.models.HsPointTimePeriod
-import io.horizontalsystems.marketkit.models.HsTimePeriod
-import io.horizontalsystems.marketkit.models.MarketInfo
-import io.horizontalsystems.marketkit.models.MarketInfoOverview
-import io.horizontalsystems.marketkit.models.MarketOverview
-import io.horizontalsystems.marketkit.models.MarketTicker
-import io.horizontalsystems.marketkit.models.NftTopCollection
-import io.horizontalsystems.marketkit.models.Post
-import io.horizontalsystems.marketkit.models.RankMultiValue
-import io.horizontalsystems.marketkit.models.RankValue
-import io.horizontalsystems.marketkit.models.SubscriptionResponse
-import io.horizontalsystems.marketkit.models.Token
-import io.horizontalsystems.marketkit.models.TokenHolders
-import io.horizontalsystems.marketkit.models.TokenQuery
-import io.horizontalsystems.marketkit.models.TopMovers
-import io.horizontalsystems.marketkit.models.TopPair
-import io.horizontalsystems.marketkit.models.TopPlatform
-import io.horizontalsystems.marketkit.models.TopPlatformMarketCapPoint
-import io.horizontalsystems.marketkit.providers.CoinPriceSchedulerFactory
-import io.horizontalsystems.marketkit.providers.CryptoCompareProvider
-import io.horizontalsystems.marketkit.providers.HsNftProvider
-import io.horizontalsystems.marketkit.providers.HsProvider
-import io.horizontalsystems.marketkit.storage.CoinHistoricalPriceStorage
-import io.horizontalsystems.marketkit.storage.CoinPriceStorage
-import io.horizontalsystems.marketkit.storage.CoinStorage
-import io.horizontalsystems.marketkit.storage.GlobalMarketInfoStorage
-import io.horizontalsystems.marketkit.storage.MarketDatabase
+import io.horizontalsystems.marketkit.managers.*
+import io.horizontalsystems.marketkit.models.*
+import io.horizontalsystems.marketkit.providers.*
+import io.horizontalsystems.marketkit.storage.*
 import io.horizontalsystems.marketkit.syncers.CoinSyncer
+import io.horizontalsystems.marketkit.syncers.ExchangeSyncer
 import io.horizontalsystems.marketkit.syncers.HsDataSyncer
 import io.reactivex.Observable
 import io.reactivex.Single
-import retrofit2.Response
 import java.math.BigDecimal
-import java.util.Date
+import java.util.*
 
 class MarketKit(
     private val nftManager: NftManager,
@@ -71,10 +24,10 @@ class MarketKit(
     private val coinHistoricalPriceManager: CoinHistoricalPriceManager,
     private val coinPriceSyncManager: CoinPriceSyncManager,
     private val postManager: PostManager,
+    private val exchangeSyncer: ExchangeSyncer,
     private val globalMarketInfoManager: GlobalMarketInfoManager,
     private val hsProvider: HsProvider,
-    private val hsDataSyncer: HsDataSyncer,
-    private val dumpManager: DumpManager,
+    private val hsDataSyncer: HsDataSyncer
 ) {
     // Coins
 
@@ -106,67 +59,36 @@ class MarketKit(
     fun blockchains(uids: List<String>): List<Blockchain> =
         coinManager.blockchains(uids)
 
-    fun allBlockchains(): List<Blockchain> =
-        coinManager.allBlockchains()
-
     fun blockchain(uid: String): Blockchain? =
         coinManager.blockchain(uid)
 
-    fun marketInfosSingle(
-        top: Int,
-        currencyCode: String,
-        defi: Boolean,
-        apiTag: String
-    ): Single<List<MarketInfo>> {
-        return hsProvider.marketInfosSingle(top, currencyCode, defi, apiTag).map {
-            coinManager.getMarketInfos(it)
-        }
+    fun marketInfosSingle(top: Int, currencyCode: String, defi: Boolean = false): Single<List<MarketInfo>> {
+        return coinManager.marketInfosSingle(top, currencyCode, defi)
     }
 
-    fun advancedMarketInfosSingle(
-        top: Int = 250,
-        currencyCode: String,
-    ): Single<List<MarketInfo>> {
-        return hsProvider.advancedMarketInfosSingle(top, currencyCode).map {
-            coinManager.getMarketInfos(it)
-        }
+    fun advancedMarketInfosSingle(top: Int = 250, currencyCode: String): Single<List<MarketInfo>> {
+        return coinManager.advancedMarketInfosSingle(top, currencyCode)
     }
 
-    fun marketInfosSingle(
-        coinUids: List<String>,
-        currencyCode: String,
-        apiTag: String
-    ): Single<List<MarketInfo>> {
-        return hsProvider.marketInfosSingle(coinUids, currencyCode, apiTag).map {
-            coinManager.getMarketInfos(it)
-        }
+    fun marketInfosSingle(coinUids: List<String>, currencyCode: String): Single<List<MarketInfo>> {
+        return coinManager.marketInfosSingle(coinUids, currencyCode)
     }
 
-    fun marketInfosSingle(
-        categoryUid: String,
-        currencyCode: String,
-        apiTag: String
-    ): Single<List<MarketInfo>> {
-        return hsProvider.marketInfosSingle(categoryUid, currencyCode, apiTag).map {
-            coinManager.getMarketInfos(it)
-        }
+    fun marketInfosSingle(categoryUid: String, currencyCode: String): Single<List<MarketInfo>> {
+        return coinManager.marketInfosSingle(categoryUid, currencyCode)
     }
 
     fun marketInfoOverviewSingle(
         coinUid: String,
         currencyCode: String,
-        language: String,
-        apiTag: String,
+        language: String
     ): Single<MarketInfoOverview> {
-        return hsProvider.getMarketInfoOverview(
-            coinUid = coinUid,
-            currencyCode = currencyCode,
-            language = language,
-            apiTag = apiTag,
-        ).map { rawOverview ->
-            val fullCoin = coinManager.fullCoin(coinUid) ?: throw Exception("No Full Coin")
+        return coinManager.marketInfoOverviewSingle(coinUid, currencyCode, language)
+    }
 
-            rawOverview.marketInfoOverview(fullCoin)
+    fun marketInfoDetailsSingle(coinUid: String, currencyCode: String): Single<MarketInfoDetails> {
+        return hsProvider.getMarketInfoDetails(coinUid, currencyCode).map {
+            MarketInfoDetails(it)
         }
     }
 
@@ -186,10 +108,8 @@ class MarketKit(
         return hsProvider.marketInfoGlobalTvlSingle(chain, currencyCode, timePeriod)
     }
 
-    fun defiMarketInfosSingle(currencyCode: String, apiTag: String): Single<List<DefiMarketInfo>> {
-        return hsProvider.defiMarketInfosSingle(currencyCode, apiTag).map {
-            coinManager.getDefiMarketInfos(it)
-        }
+    fun defiMarketInfosSingle(currencyCode: String): Single<List<DefiMarketInfo>> {
+        return coinManager.defiMarketInfosSingle(currencyCode)
     }
 
     // Categories
@@ -197,15 +117,12 @@ class MarketKit(
     fun coinCategoriesSingle(currencyCode: String): Single<List<CoinCategory>> =
         hsProvider.getCoinCategories(currencyCode)
 
-    fun coinCategoryMarketPointsSingle(
-        categoryUid: String,
-        interval: HsTimePeriod,
-        currencyCode: String
-    ) =
+    fun coinCategoryMarketPointsSingle(categoryUid: String, interval: HsTimePeriod, currencyCode: String) =
         hsProvider.coinCategoryMarketPointsSingle(categoryUid, interval, currencyCode)
 
     fun sync() {
         hsDataSyncer.sync()
+        exchangeSyncer.sync()
     }
 
     // Coin Prices
@@ -222,20 +139,15 @@ class MarketKit(
         return coinPriceManager.coinPriceMap(coinUids, currencyCode)
     }
 
-    fun coinPriceObservable(
-        tag: String,
-        coinUid: String,
-        currencyCode: String
-    ): Observable<CoinPrice> {
-        return coinPriceSyncManager.coinPriceObservable(tag, coinUid, currencyCode)
+    fun coinPriceObservable(coinUid: String, currencyCode: String): Observable<CoinPrice> {
+        return coinPriceSyncManager.coinPriceObservable(coinUid, currencyCode)
     }
 
     fun coinPriceMapObservable(
-        tag: String,
         coinUids: List<String>,
         currencyCode: String
     ): Observable<Map<String, CoinPrice>> {
-        return coinPriceSyncManager.coinPriceMapObservable(tag, coinUids, currencyCode)
+        return coinPriceSyncManager.coinPriceMapObservable(coinUids, currencyCode)
     }
 
     // Coin Historical Price
@@ -265,17 +177,13 @@ class MarketKit(
     // Market Tickers
 
     fun marketTickersSingle(coinUid: String): Single<List<MarketTicker>> {
-        return hsProvider.marketTickers(coinUid)
+        return coinManager.marketTickersSingle(coinUid)
     }
 
     // Details
 
-    fun tokenHoldersSingle(
-        authToken: String,
-        coinUid: String,
-        blockchainUid: String
-    ): Single<TokenHolders> {
-        return hsProvider.tokenHoldersSingle(authToken, coinUid, blockchainUid)
+    fun tokenHoldersSingle(coinUid: String, blockchainUid: String): Single<TokenHolders> {
+        return hsProvider.tokenHoldersSingle(coinUid, blockchainUid)
     }
 
     fun treasuriesSingle(coinUid: String, currencyCode: String): Single<List<CoinTreasury>> {
@@ -290,13 +198,13 @@ class MarketKit(
         return hsProvider.coinReportsSingle(coinUid)
     }
 
+    fun auditReportsSingle(addresses: List<String>): Single<List<Auditor>> {
+        return coinManager.auditReportsSingle(addresses)
+    }
+
     // Pro Data
 
-    fun cexVolumesSingle(
-        coinUid: String,
-        currencyCode: String,
-        timePeriod: HsTimePeriod
-    ): Single<List<ChartPoint>> {
+    fun cexVolumesSingle(coinUid: String, currencyCode: String, timePeriod: HsTimePeriod): Single<List<ChartPoint>> {
         val periodType = HsPeriodType.ByPeriod(timePeriod)
         val currentTime = Date().time / 1000
         val fromTimestamp = HsChartRequestHelper.fromTimestamp(currentTime, periodType)
@@ -311,250 +219,116 @@ class MarketKit(
             }
     }
 
-    fun dexLiquiditySingle(
-        authToken: String,
-        coinUid: String,
-        currencyCode: String,
-        timePeriod: HsTimePeriod
-    ): Single<List<Analytics.VolumePoint>> {
-        return hsProvider.dexLiquiditySingle(authToken, coinUid, currencyCode, timePeriod)
+    fun dexLiquiditySingle(coinUid: String, currencyCode: String, timePeriod: HsTimePeriod, sessionKey: String?): Single<List<Analytics.VolumePoint>> {
+        return hsProvider.dexLiquiditySingle(coinUid, currencyCode, timePeriod, sessionKey)
     }
 
-    fun dexVolumesSingle(
-        authToken: String,
-        coinUid: String,
-        currencyCode: String,
-        timePeriod: HsTimePeriod
-    ): Single<List<Analytics.VolumePoint>> {
-        return hsProvider.dexVolumesSingle(authToken, coinUid, currencyCode, timePeriod)
+    fun dexVolumesSingle(coinUid: String, currencyCode: String, timePeriod: HsTimePeriod, sessionKey: String?): Single<List<Analytics.VolumePoint>> {
+        return hsProvider.dexVolumesSingle(coinUid, currencyCode, timePeriod, sessionKey)
     }
 
-    fun transactionDataSingle(
-        authToken: String,
-        coinUid: String,
-        timePeriod: HsTimePeriod,
-        platform: String?
-    ): Single<List<Analytics.CountVolumePoint>> {
-        return hsProvider.transactionDataSingle(authToken, coinUid, timePeriod, platform)
+    fun transactionDataSingle(coinUid: String, timePeriod: HsTimePeriod, platform: String?, sessionKey: String?): Single<List<Analytics.CountVolumePoint>> {
+        return hsProvider.transactionDataSingle(coinUid, timePeriod, platform, sessionKey)
     }
 
-    fun activeAddressesSingle(
-        authToken: String,
-        coinUid: String,
-        timePeriod: HsTimePeriod
-    ): Single<List<Analytics.CountPoint>> {
-        return hsProvider.activeAddressesSingle(authToken, coinUid, timePeriod)
+    fun activeAddressesSingle(coinUid: String, timePeriod: HsTimePeriod, sessionKey: String?): Single<List<Analytics.CountPoint>> {
+        return hsProvider.activeAddressesSingle(coinUid, timePeriod, sessionKey)
     }
 
-    fun analyticsPreviewSingle(
-        coinUid: String,
-        addresses: List<String>,
-        apiTag: String
-    ): Single<AnalyticsPreview> {
-        return hsProvider.analyticsPreviewSingle(coinUid, addresses, apiTag)
+    fun analyticsPreviewSingle(coinUid: String): Single<AnalyticsPreview> {
+        return hsProvider.analyticsPreviewSingle(coinUid)
     }
 
-    fun analyticsSingle(
-        authToken: String,
-        coinUid: String,
-        currencyCode: String,
-        apiTag: String
-    ): Single<Analytics> {
-        return hsProvider.analyticsSingle(authToken, coinUid, currencyCode, apiTag)
+    fun analyticsSingle(coinUid: String, currencyCode: String): Single<Analytics> {
+        return hsProvider.analyticsSingle(coinUid, currencyCode)
     }
 
-    fun cexVolumeRanksSingle(
-        authToken: String,
-        currencyCode: String
-    ): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "cex_volume", currencyCode)
+    fun cexVolumeRanksSingle(currencyCode: String): Single<List<RankMultiValue>> {
+        return hsProvider.rankMultiValueSingle("cex_volume", currencyCode)
     }
 
-    fun dexVolumeRanksSingle(
-        authToken: String,
-        currencyCode: String
-    ): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "dex_volume", currencyCode)
+    fun dexVolumeRanksSingle(currencyCode: String): Single<List<RankMultiValue>> {
+        return hsProvider.rankMultiValueSingle("dex_volume", currencyCode)
     }
 
-    fun dexLiquidityRanksSingle(authToken: String, currencyCode: String): Single<List<RankValue>> {
-        return hsProvider.rankValueSingle(authToken, "dex_liquidity", currencyCode)
+    fun dexLiquidityRanksSingle(currencyCode: String): Single<List<RankValue>> {
+        return hsProvider.rankValueSingle("dex_liquidity", currencyCode)
     }
 
-    fun activeAddressRanksSingle(
-        authToken: String,
-        currencyCode: String
-    ): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "address", currencyCode)
+    fun activeAddressRanksSingle(currencyCode: String): Single<List<RankMultiValue>> {
+        return hsProvider.rankMultiValueSingle("address", currencyCode)
     }
 
-    fun transactionCountsRanksSingle(
-        authToken: String,
-        currencyCode: String
-    ): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "tx_count", currencyCode)
+    fun transactionCountsRanksSingle(currencyCode: String): Single<List<RankMultiValue>> {
+        return hsProvider.rankMultiValueSingle("tx_count", currencyCode)
     }
 
-    fun holderRanksSingle(authToken: String, currencyCode: String): Single<List<RankValue>> {
-        return hsProvider.rankValueSingle(authToken, "holders", currencyCode)
-    }
-
-    fun revenueRanksSingle(authToken: String, currencyCode: String): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "revenue", currencyCode)
-    }
-
-    fun feeRanksSingle(authToken: String, currencyCode: String): Single<List<RankMultiValue>> {
-        return hsProvider.rankMultiValueSingle(authToken, "fee", currencyCode)
-    }
-
-    fun subscriptionsSingle(addresses: List<String>): Single<List<SubscriptionResponse>> {
-        return hsProvider.subscriptionsSingle(addresses)
+    fun revenueRanksSingle(currencyCode: String): Single<List<RankMultiValue>> {
+        return hsProvider.rankMultiValueSingle("revenue", currencyCode)
     }
 
     // Overview
     fun marketOverviewSingle(currencyCode: String): Single<MarketOverview> =
         marketOverviewManager.marketOverviewSingle(currencyCode)
 
-    fun topPairsSingle(currencyCode: String, page: Int, limit: Int): Single<List<TopPair>> =
-        hsProvider.topPairsSingle(currencyCode, page, limit)
-
 
     fun topMoversSingle(currencyCode: String): Single<TopMovers> =
-        hsProvider.topMoversRawSingle(currencyCode)
-            .map { raw ->
-                TopMovers(
-                    gainers100 = coinManager.getMarketInfos(raw.gainers100),
-                    gainers200 = coinManager.getMarketInfos(raw.gainers200),
-                    gainers300 = coinManager.getMarketInfos(raw.gainers300),
-                    losers100 = coinManager.getMarketInfos(raw.losers100),
-                    losers200 = coinManager.getMarketInfos(raw.losers200),
-                    losers300 = coinManager.getMarketInfos(raw.losers300)
-                )
-            }
+        coinManager.topMoversSingle(currencyCode)
 
     // Chart Info
 
     fun chartPointsSingle(
         coinUid: String,
         currencyCode: String,
-        interval: HsPointTimePeriod,
-        pointCount: Int
-    ): Single<List<ChartPoint>> {
-        val fromTimestamp = Date().time / 1000 - interval.interval * pointCount
-
-        return hsProvider.coinPriceChartSingle(coinUid, currencyCode, interval, fromTimestamp)
-            .map { response ->
-                response.map { chartCoinPrice ->
-                    chartCoinPrice.chartPoint
-                }
-            }
-    }
-
-    fun chartPointsSingle(
-        coinUid: String,
-        currencyCode: String,
         periodType: HsPeriodType
-    ): Single<Pair<Long, List<ChartPoint>>> {
-        val data = intervalData(periodType)
-        return hsProvider.coinPriceChartSingle(coinUid, currencyCode, data.interval, data.fromTimestamp)
-            .map {
-                Pair(data.visibleTimestamp, it.map { it.chartPoint })
-            }
-    }
-
-    private fun intervalData(periodType: HsPeriodType): IntervalData {
-        val interval = HsChartRequestHelper.pointInterval(periodType)
-        val visibleTimestamp: Long
-        val fromTimestamp: Long?
+    ): Single<List<ChartPoint>> {
+        val interval: HsPointTimePeriod
+        var fromTimestamp: Long? = null
         when (periodType) {
             is HsPeriodType.ByPeriod -> {
                 val currentTime = Date().time / 1000
-                visibleTimestamp = HsChartRequestHelper.fromTimestamp(currentTime, periodType)
-                fromTimestamp = visibleTimestamp
+                fromTimestamp = HsChartRequestHelper.fromTimestamp(currentTime, periodType)
+                interval = HsChartRequestHelper.pointInterval(periodType)
             }
-
-            is HsPeriodType.ByCustomPoints -> {
-                val currentTime = Date().time / 1000
-                visibleTimestamp = HsChartRequestHelper.fromTimestamp(currentTime, periodType)
-                val customPointsInterval = interval.interval * periodType.pointsCount
-                fromTimestamp = visibleTimestamp - customPointsInterval
-            }
-
             is HsPeriodType.ByStartTime -> {
-                visibleTimestamp = periodType.startTime
-                fromTimestamp = null
+                interval = HsChartRequestHelper.pointInterval(periodType)
             }
         }
-
-        return IntervalData(interval, fromTimestamp, visibleTimestamp)
+        return hsProvider.coinPriceChartSingle(coinUid, currencyCode, interval, fromTimestamp)
+            .map { response -> response.map { it.chartPoint } }
     }
 
     fun chartStartTimeSingle(coinUid: String): Single<Long> {
         return hsProvider.coinPriceChartStartTime(coinUid)
     }
 
-    fun topPlatformMarketCapStartTimeSingle(platform: String): Single<Long> {
-        return hsProvider.topPlatformMarketCapStartTime(platform)
-    }
-
     // Global Market Info
 
-    fun globalMarketPointsSingle(
-        currencyCode: String,
-        timePeriod: HsTimePeriod
-    ): Single<List<GlobalMarketPoint>> {
+    fun globalMarketPointsSingle(currencyCode: String, timePeriod: HsTimePeriod): Single<List<GlobalMarketPoint>> {
         return globalMarketInfoManager.globalMarketInfoSingle(currencyCode, timePeriod)
     }
 
-    fun topPlatformsSingle(currencyCode: String, apiTag: String): Single<List<TopPlatform>> {
-        return hsProvider.topPlatformsSingle(currencyCode, apiTag)
+    fun topPlatformsSingle(currencyCode: String): Single<List<TopPlatform>> {
+        return hsProvider.topPlatformsSingle(currencyCode)
             .map { responseList -> responseList.map { it.topPlatform } }
     }
 
-    fun topPlatformMarketCapPointsSingle(
-        chain: String,
-        currencyCode: String,
-        periodType: HsPeriodType
-    ): Single<List<TopPlatformMarketCapPoint>> {
-        val data = intervalData(periodType)
-        return hsProvider.topPlatformMarketCapPointsSingle(chain, currencyCode, data.interval, data.fromTimestamp)
+    fun topPlatformMarketCapPointsSingle(chain: String, timePeriod: HsTimePeriod, currencyCode: String): Single<List<TopPlatformMarketCapPoint>> {
+        return hsProvider.topPlatformMarketCapPointsSingle(chain, timePeriod, currencyCode)
     }
 
-    fun topPlatformMarketInfosSingle(
-        chain: String,
-        currencyCode: String,
-        apiTag: String
-    ): Single<List<MarketInfo>> {
-        return hsProvider.topPlatformCoinListSingle(chain, currencyCode, apiTag)
-            .map { coinManager.getMarketInfos(it) }
+    fun topPlatformCoinListSingle(chain: String, currencyCode: String): Single<List<MarketInfo>> {
+        return coinManager.topPlatformCoinListSingle(chain, currencyCode)
     }
 
     // NFT
 
     suspend fun nftTopCollections(): List<NftTopCollection> = nftManager.topCollections()
 
-    // Auth
-
-    fun authGetSignMessage(address: String): Single<String> {
-        return hsProvider.authGetSignMessage(address)
-    }
-
-    fun authenticate(signature: String, address: String): Single<String> {
-        return hsProvider.authenticate(signature, address)
-    }
-
-    fun requestPersonalSupport(authToken: String, username: String): Single<Response<Void>> {
-        return hsProvider.requestPersonalSupport(authToken, username)
-    }
-
     //Misc
 
-    fun syncInfo(): SyncInfo {
+    fun syncInfo() : SyncInfo {
         return coinSyncer.syncInfo()
-    }
-
-    fun getInitialDump(): String {
-        return dumpManager.getInitialDump()
     }
 
     companion object {
@@ -563,25 +337,26 @@ class MarketKit(
             hsApiBaseUrl: String,
             hsApiKey: String,
             cryptoCompareApiKey: String? = null,
-            appVersion: String,
-            appId: String? = null,
+            defiYieldApiKey: String? = null
         ): MarketKit {
             // init cache
             (context.getSystemService(Context.STORAGE_SERVICE) as StorageManager?)?.let { storageManager ->
                 val cacheDir = context.cacheDir
-                val cacheQuotaBytes =
-                    storageManager.getCacheQuotaBytes(storageManager.getUuidForPath(cacheDir))
+                val cacheQuotaBytes = storageManager.getCacheQuotaBytes(storageManager.getUuidForPath(cacheDir))
 
                 HSCache.cacheDir = cacheDir
                 HSCache.cacheQuotaBytes = cacheQuotaBytes
             }
 
             val marketDatabase = MarketDatabase.getInstance(context)
-            val dumpManager = DumpManager(marketDatabase)
-            val hsProvider = HsProvider(hsApiBaseUrl, hsApiKey, appVersion, appId)
+            val hsProvider = HsProvider(hsApiBaseUrl, hsApiKey)
             val hsNftProvider = HsNftProvider(hsApiBaseUrl, hsApiKey)
+            val coinGeckoProvider = CoinGeckoProvider("https://api.coingecko.com/api/v3/")
+            val defiYieldProvider = DefiYieldProvider(defiYieldApiKey)
+            val exchangeManager = ExchangeManager(ExchangeStorage(marketDatabase))
+            val exchangeSyncer = ExchangeSyncer(exchangeManager, coinGeckoProvider, marketDatabase.syncerStateDao())
             val coinStorage = CoinStorage(marketDatabase)
-            val coinManager = CoinManager(coinStorage)
+            val coinManager = CoinManager(coinStorage, hsProvider, coinGeckoProvider, defiYieldProvider, exchangeManager)
             val nftManager = NftManager(coinManager, hsNftProvider)
             val marketOverviewManager = MarketOverviewManager(nftManager, hsProvider)
             val coinSyncer = CoinSyncer(hsProvider, coinStorage, marketDatabase.syncerStateDao())
@@ -608,10 +383,10 @@ class MarketKit(
                 coinHistoricalPriceManager,
                 coinPriceSyncManager,
                 postManager,
+                exchangeSyncer,
                 globalMarketInfoManager,
                 hsProvider,
-                hsDataSyncer,
-                dumpManager,
+                hsDataSyncer
             )
         }
     }
@@ -619,6 +394,9 @@ class MarketKit(
 }
 
 //Errors
+
+class NoChartData : Exception()
+class NoChartInfo : Exception()
 
 sealed class ProviderError : Exception() {
     class ApiRequestLimitExceeded : ProviderError()

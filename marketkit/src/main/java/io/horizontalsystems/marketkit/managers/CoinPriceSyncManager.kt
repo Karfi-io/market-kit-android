@@ -9,14 +9,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 data class CoinPriceKey(
-    val tag: String,
     val coinUids: List<String>,
     val currencyCode: String
 )
 
 interface ICoinPriceCoinUidDataSource {
-    fun allCoinUids(currencyCode: String): List<String>
-    fun combinedCoinUids(currencyCode: String): Pair<List<String>, List<String>>
+    fun coinUids(currencyCode: String): List<String>
 }
 
 class CoinPriceSyncManager(
@@ -35,13 +33,6 @@ class CoinPriceSyncManager(
             .toSet()
     }
 
-    private fun observingCoinUids(tag: String, currencyCode: String): Set<String> {
-        return subjects
-            .filter { it.key.tag == tag && it.key.currencyCode == currencyCode }
-            .map { it.key.coinUids }
-            .flatten()
-            .toSet()
-    }
 
     private fun needForceUpdate(key: CoinPriceKey): Boolean {
         //get set of all listening coins
@@ -114,18 +105,12 @@ class CoinPriceSyncManager(
     }
 
     // ICoinPriceCoinUidDataSource
-    override fun allCoinUids(currencyCode: String): List<String> {
+    override fun coinUids(currencyCode: String): List<String> {
         return observingCoinUids(currencyCode).toList()
     }
 
-    override fun combinedCoinUids(currencyCode: String): Pair<List<String>, List<String>> {
-        val allCoinUids = observingCoinUids(currencyCode).toList()
-        val walletCoinUids = observingCoinUids("wallet", currencyCode).toList()
-        return Pair(allCoinUids, walletCoinUids)
-    }
-
-    fun coinPriceObservable(tag: String, coinUid: String, currencyCode: String): Observable<CoinPrice> {
-        val key = CoinPriceKey(tag, listOf(coinUid), currencyCode)
+    fun coinPriceObservable(coinUid: String, currencyCode: String): Observable<CoinPrice> {
+        val key = CoinPriceKey(listOf(coinUid), currencyCode)
 
         return subject(key).flatMap { coinPriceMap ->
             coinPriceMap[coinUid]?.let { coinPrice ->
@@ -134,8 +119,8 @@ class CoinPriceSyncManager(
         }
     }
 
-    fun coinPriceMapObservable(tag: String, coinUids: List<String>, currencyCode: String): Observable<Map<String, CoinPrice>> {
-        val key = CoinPriceKey(tag, coinUids, currencyCode)
+    fun coinPriceMapObservable(coinUids: List<String>, currencyCode: String): Observable<Map<String, CoinPrice>> {
+        val key = CoinPriceKey(coinUids, currencyCode)
         return subject(key)
     }
 

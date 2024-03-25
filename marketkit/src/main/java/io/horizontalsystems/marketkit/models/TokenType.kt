@@ -5,26 +5,8 @@ import kotlinx.parcelize.Parcelize
 
 sealed class TokenType : Parcelable {
 
-    enum class Derivation {
-        Bip44,
-        Bip49,
-        Bip84,
-        Bip86,
-    }
-
-    enum class AddressType {
-        Type0,
-        Type145,
-    }
-
     @Parcelize
     object Native : TokenType()
-
-    @Parcelize
-    data class Derived(val derivation: Derivation) : TokenType()
-
-    @Parcelize
-    data class AddressTyped(val type: AddressType) : TokenType()
 
     @Parcelize
     data class Eip20(val address: String) : TokenType()
@@ -36,83 +18,60 @@ sealed class TokenType : Parcelable {
     data class Spl(val address: String) : TokenType()
 
     @Parcelize
-    data class Unsupported(val type: String, val reference: String) : TokenType()
+    data class Unsupported(val type: String, val reference: String?) : TokenType()
 
     val id: String
-        get() {
-            val parts = when (this) {
-                Native -> listOf("native")
-                is Eip20 -> listOf("eip20", address)
-                is Bep2 -> listOf("bep2", symbol)
-                is Spl -> listOf("spl", address)
-                is AddressTyped -> listOf("address_type", type.name.lowercase())
-                is Derived -> listOf("derived", derivation.name.lowercase())
-                is Unsupported -> if (reference.isNotBlank()) {
-                    listOf("unsupported", type, reference)
-                } else {
-                    listOf("unsupported", type)
-                }
+        get() = when (this) {
+            Native -> "native"
+            is Eip20 -> listOf("eip20", address).joinToString(":")
+            is Bep2 -> listOf("bep2", symbol).joinToString(":")
+            is Spl -> listOf("spl", address).joinToString(":")
+            is Unsupported -> if (reference != null) {
+                listOf("unsupported", type, reference).joinToString(":")
+            } else {
+                listOf("unsupported", type).joinToString(":")
             }
-            return parts.joinToString(":")
         }
 
     val values: Value
         get() = when (this) {
-            is Native -> Value("native", "")
+            is Native -> Value("native", null)
             is Eip20 -> Value("eip20", address)
             is Bep2 -> Value("bep2", symbol)
             is Spl -> Value("spl", address)
-            is AddressTyped -> Value("address_type", type.name)
-            is Derived -> Value("derived", derivation.name)
             is Unsupported -> Value(type, reference)
         }
 
     data class Value(
         val type: String,
-        val reference: String
+        val reference: String?
     )
 
     companion object {
 
-        fun fromType(type: String, reference: String = ""): TokenType {
+        fun fromType(type: String, reference: String? = null): TokenType {
             when (type) {
                 "native" -> return Native
 
                 "eip20" -> {
-                    if (reference.isNotBlank()) {
+                    if (reference != null) {
                         return Eip20(reference)
                     }
                 }
 
                 "bep2" -> {
-                    if (reference.isNotBlank()) {
+                    if (reference != null) {
                         return Bep2(reference)
                     }
                 }
 
                 "spl" -> {
-                    if (reference.isNotBlank()) {
+                    if (reference != null) {
                         return Spl(reference)
                     }
                 }
 
-                "address_type" -> {
-                    if (reference.isNotBlank()) {
-                        try {
-                            return AddressTyped(AddressType.valueOf(reference.lowercase().replaceFirstChar(Char::uppercase)))
-                        } catch (e: IllegalArgumentException) {
-                        }
-                    }
-                }
-
-                "derived" -> {
-                    if (reference.isNotBlank()) {
-                        try {
-                            return Derived(Derivation.valueOf(reference.lowercase().replaceFirstChar(Char::uppercase)))
-                        } catch (e: IllegalArgumentException) {
-                        }
-                    }
-                }
+                else -> {}
             }
 
             return Unsupported(type, reference)
@@ -120,11 +79,26 @@ sealed class TokenType : Parcelable {
 
         fun fromId(id: String): TokenType? {
             val chunks = id.split(":")
-            val type = chunks[0]
-            val reference = chunks.getOrNull(1) ?: ""
 
-            return fromType(type, reference)
+            return when (chunks[0]) {
+                "native" -> Native
+                "eip20" -> chunks.getOrNull(1)?.let {
+                    Eip20(it)
+                }
+                "bep2" -> chunks.getOrNull(1)?.let {
+                    Bep2(it)
+                }
+                "spl" -> chunks.getOrNull(1)?.let {
+                    Spl(it)
+                }
+                "unsupported" -> chunks.getOrNull(1)?.let {
+                    Unsupported(it, chunks.getOrNull(2))
+                }
+                else -> null
+            }
+
         }
+
     }
 
 }

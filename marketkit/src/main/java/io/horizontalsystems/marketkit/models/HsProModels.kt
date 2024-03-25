@@ -90,27 +90,17 @@ data class Analytics(
     val addresses: Addresses?,
     val transactions: Transactions?,
     val revenue: Revenue?,
-    val fee: Fee?,
     val tvl: Tvl?,
     val reports: Int?,
     @SerializedName("funds_invested")
     val fundsInvested: BigDecimal?,
     val treasuries: BigDecimal?,
     val holders: List<HolderBlockchain>?,
-    @SerializedName("holders_rank")
-    val holdersRank: Int?,
-    @SerializedName("holders_rating")
-    val holdersRating: String?,
-    val audits: List<Audit>? = null,
-    val issues: List<BlockchainIssues>? = null,
-    @SerializedName("indicators")
-    val technicalAdvice: TechnicalAdvice? = null,
 ) {
 
     data class ExVolume(
         @SerializedName("rank_30d")
-        val rank30d: Int?,
-        val rating: String?,
+        val rank30d: Int,
         val points: List<VolumePoint>,
     ) {
         fun chartPoints(): List<ChartPoint> {
@@ -125,8 +115,7 @@ data class Analytics(
     }
 
     data class DexLiquidity(
-        val rank: Int?,
-        val rating: String?,
+        val rank: Int,
         val points: List<VolumePoint>,
     ) {
         fun chartPoints(): List<ChartPoint> {
@@ -142,10 +131,9 @@ data class Analytics(
 
     data class Addresses(
         @SerializedName("rank_30d")
-        val rank30d: Int?,
+        val rank30d: Int,
         @SerializedName("count_30d")
-        val count30d: Int?,
-        val rating: String?,
+        val count30d: Int,
         val points: List<CountPoint>,
     ) {
         fun chartPoints(): List<ChartPoint> {
@@ -161,10 +149,9 @@ data class Analytics(
 
     data class Transactions(
         @SerializedName("rank_30d")
-        val rank30d: Int?,
+        val rank30d: Int,
         @SerializedName("volume_30d")
-        val volume30d: BigDecimal?,
-        val rating: String?,
+        val volume30d: BigDecimal,
         val points: List<CountPoint>,
     ) {
         fun chartPoints(): List<ChartPoint> {
@@ -179,8 +166,8 @@ data class Analytics(
     }
 
     data class Tvl(
-        val rank: Int?,
-        val ratio: BigDecimal?,
+        val rank: Int,
+        val ratio: BigDecimal,
         val points: List<TvlPoint>,
     ) {
         fun chartPoints(): List<ChartPoint> {
@@ -224,60 +211,10 @@ data class Analytics(
 
     data class Revenue(
         @SerializedName("rank_30d")
-        val rank30d: Int?,
+        val rank30d: Int,
         @SerializedName("value_30d")
-        val value30d: BigDecimal?,
-        val description: String?,
-        val rating: String?,
+        val value30d: BigDecimal,
     )
-
-    data class Fee(
-        @SerializedName("rank_30d")
-        val rank30d: Int?,
-        @SerializedName("value_30d")
-        val value30d: BigDecimal?,
-        val description: String?,
-        val rating: String?,
-    )
-
-    data class TechnicalAdvice(
-        val ema: BigDecimal?,
-        val rsi: BigDecimal?,
-        val macd: BigDecimal?,
-        val lower: BigDecimal?,
-        val price: BigDecimal?,
-        val upper: BigDecimal?,
-        val middle: BigDecimal?,
-        val timestamp: Long?,
-        @SerializedName("state")
-        val advice: Advice?,
-        @SerializedName("signal_timestamp")
-        val signalTimestamp: Long?
-    ) {
-
-        enum class Advice {
-            @SerializedName("oversold")
-            Oversold,
-
-            @SerializedName("buy_signal")
-            StrongBuy,
-
-            @SerializedName("buy")
-            Buy,
-
-            @SerializedName("neutral")
-            Neutral,
-
-            @SerializedName("sell")
-            Sell,
-
-            @SerializedName("sell_signal")
-            StrongSell,
-
-            @SerializedName("overbought")
-            Overbought;
-        }
-    }
 }
 
 data class AnalyticsPreview(
@@ -290,30 +227,23 @@ data class AnalyticsPreview(
     val addresses: AddressesPreview?,
     val transactions: TransactionPreview?,
     val revenue: RevenuePreview?,
-    val fee: FeePreview?,
     val tvl: TvlPreview?,
     val reports: Boolean = false,
     @SerializedName("funds_invested")
     val fundsInvested: Boolean = false,
     val treasuries: Boolean = false,
     val holders: Boolean = false,
-    @SerializedName("holders_rank")
-    val holdersRank: Boolean = false,
-    @SerializedName("holders_rating")
-    val holdersRating: Boolean = false,
 ) {
 
     data class VolumePreview(
         @SerializedName("rank_30d")
         val rank30d: Boolean = false,
         val points: Boolean = false,
-        val rating: Boolean = false,
     )
 
     data class LiquidityPreview(
         val rank: Boolean = false,
         val points: Boolean = false,
-        val rating: Boolean = false,
     )
 
     data class AddressesPreview(
@@ -322,7 +252,6 @@ data class AnalyticsPreview(
         @SerializedName("count_30d")
         val count30d: Boolean = false,
         val points: Boolean = false,
-        val rating: Boolean = false,
     )
 
     data class TransactionPreview(
@@ -331,7 +260,6 @@ data class AnalyticsPreview(
         @SerializedName("volume_30d")
         val volume30d: Boolean = false,
         val points: Boolean = false,
-        val rating: Boolean = false,
     )
 
     data class RevenuePreview(
@@ -339,15 +267,6 @@ data class AnalyticsPreview(
         val rank30d: Boolean = false,
         @SerializedName("value_30d")
         val value30d: Boolean = false,
-        val rating: Boolean = false,
-    )
-
-    data class FeePreview(
-        @SerializedName("rank_30d")
-        val rank30d: Boolean = false,
-        @SerializedName("value_30d")
-        val value30d: Boolean = false,
-        val rating: Boolean = false,
     )
 
     data class TvlPreview(
@@ -370,40 +289,4 @@ data class RankMultiValue(
 data class RankValue(
     val uid: String,
     val value: BigDecimal?,
-)
-
-data class SubscriptionResponse(
-    val address: String,
-    val deadline: Long
-)
-
-data class BlockchainIssues(
-    val blockchain: String,
-    val issues: List<Issue>
-) {
-
-    data class Issue(
-        val issue: String,
-        val title: String? = null,
-        val description: String,
-        val issues: List<IssueItem>? = null,
-    )
-
-    data class IssueItem(
-        val impact: String,
-        val confidence: String? = null,
-        val description: String,
-    )
-
-}
-
-data class Audit(
-    val date: String,
-    val name: String,
-    @SerializedName("audit_url")
-    val auditUrl: String,
-    @SerializedName("tech_issues")
-    val techIssues: Int,
-    @SerializedName("partner_name")
-    val partnerName: String
 )
