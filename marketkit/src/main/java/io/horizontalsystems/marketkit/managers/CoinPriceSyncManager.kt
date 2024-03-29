@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 data class CoinPriceKey(
-    val tag: String,
+    val tag: List<String>,
     val coinUids: List<String>,
     val currencyCode: String
 )
@@ -37,7 +37,7 @@ class CoinPriceSyncManager(
 
     private fun observingCoinUids(tag: String, currencyCode: String): Set<String> {
         return subjects
-            .filter { it.key.tag == tag && it.key.currencyCode == currencyCode }
+            .filter { it.key.currencyCode == currencyCode }
             .map { it.key.coinUids }
             .flatten()
             .toSet()
@@ -124,7 +124,7 @@ class CoinPriceSyncManager(
         return Pair(allCoinUids, walletCoinUids)
     }
 
-    fun coinPriceObservable(tag: String, coinUid: String, currencyCode: String): Observable<CoinPrice> {
+    fun coinPriceObservable(tag: List<String>, coinUid: String, currencyCode: String): Observable<CoinPrice> {
         val key = CoinPriceKey(tag, listOf(coinUid), currencyCode)
 
         return subject(key).flatMap { coinPriceMap ->
@@ -134,8 +134,8 @@ class CoinPriceSyncManager(
         }
     }
 
-    fun coinPriceMapObservable(tag: String, coinUids: List<String>, currencyCode: String): Observable<Map<String, CoinPrice>> {
-        val key = CoinPriceKey(tag, coinUids, currencyCode)
+    fun coinPriceMapObservable(tag: List<String>, coinUids: String, currencyCode: String): Observable<Map<String, CoinPrice>> {
+        val key = CoinPriceKey(tag, listOf(coinUids), currencyCode)
         return subject(key)
     }
 
