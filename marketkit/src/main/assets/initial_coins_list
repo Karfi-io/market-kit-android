@@ -1811,7 +1811,7 @@ INSERT INTO TokenEntity VALUES('axis-token','ethereum','eip20',8,'0xf0c5831ec3da
 INSERT INTO TokenEntity VALUES('asyagro','binance-smart-chain','eip20',18,'0xc0cc1e5761ba5786916fd055562551798e50d573');
 INSERT INTO TokenEntity VALUES('asyagro','ethereum','eip20',18,'0x017b584acfd16d767541ae9e80cdc702f4527b0b');
 INSERT INTO TokenEntity VALUES('babydot','binance-smart-chain','eip20',18,'0x08bd7f9849f8eec12fd78c9fed6ba4e47269e3d5');
-INSERT INTO TokenEntity VALUES('bcat','binance-smart-chain','eip20',18,'0x47a9B109Cfb8f89D16e8B34036150eE112572435');
+INSERT INTO TokenEntity VALUES('billicat','binance-smart-chain','eip20',18,'0x47a9B109Cfb8f89D16e8B34036150eE112572435');
 INSERT INTO TokenEntity VALUES('baby-samo-coin','solana','spl',9,'Uuc6hiKT9Y6ASoqs2phonGGw2LAtecfJu9yEohppzWH');
 INSERT INTO TokenEntity VALUES('atheneum','atheneum','native',null,'');
 INSERT INTO TokenEntity VALUES('aryacoin','aryacoin','native',null,'');
@@ -7860,7 +7860,7 @@ INSERT INTO Coin VALUES('auctus','Auctus','AUC',3630,'auctus');
 INSERT INTO Coin VALUES('baanx','Baanx','BXX',2158,'baanx');
 INSERT INTO Coin VALUES('axial-token','Axial Token','AXIAL',3641,'axial-token');
 INSERT INTO Coin VALUES('basis-cash','Basis Cash','BAC',3098,'basis-cash');
-INSERT INTO Coin VALUES('bcat','Billicat','BCAT',NULL,'billicat');
+INSERT INTO Coin VALUES('billicat','Billicat','BCAT',NULL,'billicat');
 INSERT INTO Coin VALUES('battle-pets','Battle Pets','PET',1790,'battle-pets');
 INSERT INTO Coin VALUES('bcpay-fintech','BCPAY FinTech','BCPAY',3489,'bcpay-fintech');
 INSERT INTO Coin VALUES('asia-coin','Asia Coin','ASIA',1865,'asia-coin');
