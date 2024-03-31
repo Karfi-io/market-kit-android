@@ -184,7 +184,7 @@ class MarketKit(
     }
 
     fun coinPriceObservable(
-        tag: List<String>,
+        tag: String,
         coinUid: String,
         currencyCode: String
     ): Observable<CoinPrice> {
@@ -192,8 +192,8 @@ class MarketKit(
     }
 
     fun coinPriceMapObservable(
-        tag: List<String>,
-        coinUids: String,
+        tag: String,
+        coinUids: List<String>,
         currencyCode: String
     ): Observable<Map<String, CoinPrice>> {
         return coinPriceSyncManager.coinPriceMapObservable(tag, coinUids, currencyCode)
@@ -517,8 +517,6 @@ class MarketKit(
     fun getInitialDump(): String {
         return dumpManager.getInitialDump()
     }
-
-
 
     companion object {
         fun getInstance(
